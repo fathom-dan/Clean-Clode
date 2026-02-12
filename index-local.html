@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+    <title>Clean Clode</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --green: #55ff55;
+            --med-green: #44dd44;
+            --dark-green: #2a7a2a;
+            --black: #000;
+            --dark-gray: #0a0a0a;
+            --med-gray: #1a1a1a;
+        }
+        body {
+            font-family: "Lucida Console", "Courier New", monospace;
+            font-size: 16px;
+            line-height: 1.4;
+            background: var(--black);
+            color: var(--med-green);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .header {
+            text-align: center;
+            border: 1px solid var(--green);
+            background: var(--dark-gray);
+            box-shadow: 0 0 20px rgba(85,255,85,0.15);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .logo {
+            color: var(--green);
+            font-size: 1.4rem;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(85,255,85,0.5);
+        }
+        .subtitle { color: var(--med-green); font-size: 0.85rem; }
+        .panel {
+            border: 1px solid var(--dark-green);
+            margin-bottom: 16px;
+        }
+        .panel-title {
+            background: var(--med-gray);
+            border-bottom: 1px solid var(--dark-green);
+            padding: 6px 12px;
+            color: var(--green);
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-body { background: var(--black); padding: 12px; }
+        textarea {
+            width: 100%;
+            background: var(--black);
+            color: var(--green);
+            border: none;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1.3;
+            resize: vertical;
+            caret-color: var(--green);
+            outline: none;
+        }
+        textarea::placeholder { color: var(--dark-green); }
+        textarea:focus { box-shadow: 0 0 5px rgba(85,255,85,0.3); }
+        #input-text { min-height: 80px; }
+        #output-text { min-height: 200px; }
+        .btn-row { text-align: center; padding: 12px 0; }
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 6px 16px;
+            cursor: pointer;
+            background: var(--med-gray);
+            color: var(--green);
+            border: 1px solid var(--dark-green);
+        }
+        button:hover:not(:disabled) {
+            border-color: var(--green);
+            box-shadow: 0 0 10px rgba(85,255,85,0.4);
+        }
+        button:active:not(:disabled) { background: var(--dark-green); color: var(--black); }
+        button:disabled { opacity: 0.3; cursor: default; }
+        #clean-btn { border: 2px solid var(--med-green); font-weight: bold; }
+        #clean-btn:hover:not(:disabled) {
+            background: var(--dark-green);
+            color: var(--black);
+            box-shadow: 0 0 15px rgba(85,255,85,0.6);
+        }
+        .output-panel { display: none; }
+        .output-panel.visible { display: block; }
+        .controls { display: flex; align-items: center; gap: 10px; }
+        .badge {
+            display: none;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border: 1px solid var(--med-green);
+        }
+        #copied-badge {
+            color: var(--black);
+            background: var(--green);
+            border-color: var(--green);
+        }
+        #edited-badge {
+            color: var(--green);
+            background: var(--dark-green);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <pre class="logo">█▀▀ █░░ █▀▀ █▀█ █▄░█   █▀▀ █░░ █▀█ █▀▄ █▀▀
+█▄▄ █▄▄ ██▄ █▀█ █░▀█   █▄▄ █▄▄ █▄█ █▄▀ ██▄</pre>
+        <div class="subtitle">[ TERMINAL TEXT PROCESSOR ]</div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">INPUT</div>
+        <div class="panel-body">
+            <textarea id="input-text" rows="3" placeholder="Paste mangled text here..."></textarea>
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button id="clean-btn">[ Clean My Clode ]</button>
+    </div>
+
+    <div class="panel output-panel" id="output-panel">
+        <div class="panel-title">
+            <span>OUTPUT</span>
+            <div class="controls">
+                <span id="edited-badge" class="badge">[EDITED]</span>
+                <span id="copied-badge" class="badge">[COPIED]</span>
+                <button id="copy-btn" disabled>[ COPY ]</button>
+            </div>
+        </div>
+        <div class="panel-body">
+            <textarea id="output-text" rows="15" placeholder="Ready..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var input = document.getElementById('input-text');
+    var output = document.getElementById('output-text');
+    var outputPanel = document.getElementById('output-panel');
+    var cleanBtn = document.getElementById('clean-btn');
+    var copyBtn = document.getElementById('copy-btn');
+    var editedBadge = document.getElementById('edited-badge');
+    var copiedBadge = document.getElementById('copied-badge');
+
+    function cleanLLMText(s) {
+        return s
+            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
+            .replace(/[ \t]+/g, ' ')
+            .split('\n').map(function(l){ return l.trim(); }).join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    function cleanGitDiff(s) {
+        return s
+            .replace(/[│┃╏╎|▌]+/g, '')
+            .replace(/([^\n])\n(?!\s*(\d+\s*[+-]\s*|[\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|^\s*$|$))/g, '$1 ')
+            .replace(/[ \t]+/g, ' ')
+            .split('\n').map(function(l){ return l.trim(); }).join('\n')
+            .replace(/\n{4,}/g, '\n\n\n')
+            .trim();
+    }
+
+    function cleanClaudeDump(s) {
+        return s
+            .replace(/[│┃╏╎|▌]+/g, '')
+            .replace(/ {2,}/g, ' ')
+            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
+            .replace(/([a-z,:])\s*\n\s*([a-z])/g, '$1 $2')
+            .replace(/[ \t]+/g, ' ')
+            .split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }).join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    function detectAndClean(s) {
+        if (!s.trim()) return '';
+        if (/^\s*\d+\s*[+-]\s/m.test(s)) return cleanGitDiff(s);
+        if (/[│┃╏╎▌|]/.test(s)) return cleanClaudeDump(s);
+        var codeScore = (s.match(/[{}();=]/g) || []).length;
+        var lines = s.split('\n').length;
+        if (lines > 0 && codeScore / lines > 0.5) return s.trim();
+        return cleanLLMText(s);
+    }
+
+    function showOutput(show) {
+        outputPanel.classList.toggle('visible', show);
+    }
+
+    function showBadge(el) {
+        el.style.display = 'inline-block';
+        setTimeout(function(){ el.style.display = 'none'; }, 3000);
+    }
+
+    async function copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch(e) {}
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch(e) { return false; }
+    }
+
+    function doClean() {
+        if (!input.value.trim()) return;
+        cleanBtn.textContent = '[ PROCESSING... ]';
+        cleanBtn.disabled = true;
+        setTimeout(function() {
+            var result = detectAndClean(input.value);
+            output.value = result;
+            showOutput(!!result);
+            copyBtn.disabled = !result;
+            editedBadge.style.display = 'none';
+            copiedBadge.style.display = 'none';
+            copyBtn.textContent = '[ COPY ]';
+            cleanBtn.textContent = '[ Clean My Clode ]';
+            cleanBtn.disabled = false;
+            if (result) {
+                copyToClipboard(result).then(function(ok) {
+                    if (ok) showBadge(copiedBadge);
+                });
+            }
+        }, 100);
+    }
+
+    cleanBtn.addEventListener('click', doClean);
+
+    input.addEventListener('paste', function() {
+        setTimeout(function() { if (input.value.trim()) doClean(); }, 50);
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') doClean();
+    });
+
+    input.addEventListener('input', function() {
+        output.value = '';
+        showOutput(false);
+        copyBtn.disabled = true;
+        editedBadge.style.display = 'none';
+        copiedBadge.style.display = 'none';
+    });
+
+    output.addEventListener('input', function() {
+        copyBtn.disabled = !output.value.trim();
+        if (output.value.trim()) editedBadge.style.display = 'inline-block';
+        else editedBadge.style.display = 'none';
+        copiedBadge.style.display = 'none';
+        copyBtn.textContent = '[ COPY ]';
+    });
+
+    copyBtn.addEventListener('click', function() {
+        copyBtn.textContent = '[ ... ]';
+        copyBtn.disabled = true;
+        copyToClipboard(output.value).then(function(ok) {
+            copyBtn.textContent = ok ? '[ COPIED! ]' : '[ FAILED ]';
+            if (ok) showBadge(copiedBadge);
+            setTimeout(function() {
+                copyBtn.textContent = '[ COPY ]';
+                copyBtn.disabled = !output.value.trim();
+            }, 2000);
+        });
+    });
+
+    input.focus();
+})();
+</script>
+</body>
+</html>
