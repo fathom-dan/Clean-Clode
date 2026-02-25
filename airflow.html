@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
-    <title>Clean Clode</title>
+    <title>Airflow Log Cleaner</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -27,6 +27,17 @@
             max-width: 900px;
             margin: 20px auto;
             padding: 0 20px;
+        }
+        .back-link {
+            display: inline-block;
+            color: var(--dark-green);
+            text-decoration: none;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+        .back-link:hover {
+            color: var(--green);
+            text-shadow: 0 0 5px rgba(85,255,85,0.4);
         }
         .header {
             text-align: center;
@@ -121,24 +132,22 @@
 </head>
 <body>
 <div class="container">
-    <a href="home.html" style="display:inline-block;color:#2a7a2a;text-decoration:none;font-size:0.8rem;margin-bottom:10px;"
-       onmouseover="this.style.color='#55ff55';this.style.textShadow='0 0 5px rgba(85,255,85,0.4)'"
-       onmouseout="this.style.color='#2a7a2a';this.style.textShadow='none'">&lt; back to tools</a>
+    <a href="home.html" class="back-link">&lt; back to tools</a>
     <div class="header">
-        <pre class="logo">█▀▀ █░░ █▀▀ █▀█ █▄░█   █▀▀ █░░ █▀█ █▀▄ █▀▀
-█▄▄ █▄▄ ██▄ █▀█ █░▀█   █▄▄ █▄▄ █▄█ █▄▀ ██▄</pre>
-        <div class="subtitle">[ TERMINAL TEXT PROCESSOR ]</div>
+        <pre class="logo">█▀█ █ █▀█ █▀▀ █░░ █▀█ █░█░█   █▀▀ █░░ █▀▀ █▀█ █▄░█
+█▀█ █ █▀▄ █▀░ █▄▄ █▄█ ▀▄▀▄▀   █▄▄ █▄▄ ██▄ █▀█ █░▀█</pre>
+        <div class="subtitle">[ AIRFLOW LOG PROCESSOR ]</div>
     </div>
 
     <div class="panel">
         <div class="panel-title">INPUT</div>
         <div class="panel-body">
-            <textarea id="input-text" rows="3" placeholder="Paste mangled text here..."></textarea>
+            <textarea id="input-text" rows="3" placeholder="Paste Airflow log output here..."></textarea>
         </div>
     </div>
 
     <div class="btn-row">
-        <button id="clean-btn">[ Clean My Clode ]</button>
+        <button id="clean-btn">[ Clean Airflow Logs ]</button>
     </div>
 
     <div class="panel output-panel" id="output-panel">
@@ -166,45 +175,17 @@
     var editedBadge = document.getElementById('edited-badge');
     var copiedBadge = document.getElementById('copied-badge');
 
-    function cleanLLMText(s) {
-        return s
-            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
-            .replace(/[ \t]+/g, ' ')
-            .split('\n').map(function(l){ return l.trim(); }).join('\n')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-    }
-
-    function cleanGitDiff(s) {
-        return s
-            .replace(/[│┃╏╎|▌]+/g, '')
-            .replace(/([^\n])\n(?!\s*(\d+\s*[+-]\s*|[\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|^\s*$|$))/g, '$1 ')
-            .replace(/[ \t]+/g, ' ')
-            .split('\n').map(function(l){ return l.trim(); }).join('\n')
-            .replace(/\n{4,}/g, '\n\n\n')
-            .trim();
-    }
-
-    function cleanClaudeDump(s) {
-        return s
-            .replace(/[│┃╏╎|▌]+/g, '')
-            .replace(/ {2,}/g, ' ')
-            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
-            .replace(/([a-z,:])\s*\n\s*([a-z])/g, '$1 $2')
-            .replace(/[ \t]+/g, ' ')
-            .split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }).join('\n')
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-    }
-
-    function detectAndClean(s) {
+    function cleanAirflowLogs(s) {
         if (!s.trim()) return '';
-        if (/^\s*\d+\s*[+-]\s/m.test(s)) return cleanGitDiff(s);
-        if (/[│┃╏╎▌|]/.test(s)) return cleanClaudeDump(s);
-        var codeScore = (s.match(/[{}();=]/g) || []).length;
-        var lines = s.split('\n').length;
-        if (lines > 0 && codeScore / lines > 0.5) return s.trim();
-        return cleanLLMText(s);
+        var prefixRegex = /^\[.*?\]\s*\{[^}]*\}\s*\w+\s*-\s*\[.*?\]\s*/;
+        var lines = s.split('\n');
+        var cleaned = [];
+        for (var i = 0; i < lines.length; i++) {
+            var stripped = lines[i].replace(prefixRegex, '');
+            if (stripped.trimStart().startsWith('{')) continue;
+            cleaned.push(stripped);
+        }
+        return cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim();
     }
 
     function showOutput(show) {
@@ -240,14 +221,14 @@
         cleanBtn.textContent = '[ PROCESSING... ]';
         cleanBtn.disabled = true;
         setTimeout(function() {
-            var result = detectAndClean(input.value);
+            var result = cleanAirflowLogs(input.value);
             output.value = result;
             showOutput(!!result);
             copyBtn.disabled = !result;
             editedBadge.style.display = 'none';
             copiedBadge.style.display = 'none';
             copyBtn.textContent = '[ COPY ]';
-            cleanBtn.textContent = '[ Clean My Clode ]';
+            cleanBtn.textContent = '[ Clean Airflow Logs ]';
             cleanBtn.disabled = false;
             if (result) {
                 copyToClipboard(result).then(function(ok) {

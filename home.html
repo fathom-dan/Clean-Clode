@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+    <title>Clean Clode - Tool Suite</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --green: #55ff55;
+            --med-green: #44dd44;
+            --dark-green: #2a7a2a;
+            --black: #000;
+            --dark-gray: #0a0a0a;
+            --med-gray: #1a1a1a;
+        }
+        body {
+            font-family: "Lucida Console", "Courier New", monospace;
+            font-size: 16px;
+            line-height: 1.4;
+            background: var(--black);
+            color: var(--med-green);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .header {
+            text-align: center;
+            border: 1px solid var(--green);
+            background: var(--dark-gray);
+            box-shadow: 0 0 20px rgba(85,255,85,0.15);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            color: var(--green);
+            font-size: 1.4rem;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(85,255,85,0.5);
+        }
+        .subtitle { color: var(--med-green); font-size: 0.85rem; }
+        .cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .card {
+            display: block;
+            border: 1px solid var(--dark-green);
+            background: var(--dark-gray);
+            padding: 20px 24px;
+            text-decoration: none;
+            color: var(--med-green);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            border-color: var(--green);
+            box-shadow: 0 0 15px rgba(85,255,85,0.4);
+        }
+        .card-title {
+            color: var(--green);
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+        .card-desc {
+            font-size: 0.85rem;
+            color: var(--med-green);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <pre class="logo">█▀▀ █░░ █▀▀ █▀█ █▄░█   █▀▀ █░░ █▀█ █▀▄ █▀▀
+█▄▄ █▄▄ ██▄ █▀█ █░▀█   █▄▄ █▄▄ █▄█ █▄▀ ██▄</pre>
+        <div class="subtitle">[ TOOL SUITE ]</div>
+    </div>
+
+    <div class="cards">
+        <a href="index-local.html" class="card">
+            <div class="card-title">Clean Clode</div>
+            <div class="card-desc">Clean up messy terminal text from Claude Code and other AI tools</div>
+        </a>
+        <a href="airflow.html" class="card">
+            <div class="card-title">Airflow Log Cleaner</div>
+            <div class="card-desc">Strip Airflow log prefixes and remove duplicate JSON structured logs</div>
+        </a>
+    </div>
+</div>
+</body>
+</html>
