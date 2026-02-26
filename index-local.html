@@ -186,10 +186,12 @@
     }
 
     function cleanClaudeDump(s) {
+        s = s.replace(/\x1b\[1m([^\x1b]*)\x1b\[(?:0|22)m/g, '**$1**');
+        s = s.replace(/\x1b\[[0-9;]*m/g, '');
         return s
             .replace(/[│┃╏╎|▌]+/g, '')
             .replace(/ {2,}/g, ' ')
-            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[A-Z][a-z]|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
+            .replace(/([^\n])\n(?!\s*([\-*•●⏺▶▪◦]|\d+\.|[📌🎯📋📖✨✅❌⭐🔥👉➡️]|$))/g, '$1 ')
             .replace(/([a-z,:])\s*\n\s*([a-z])/g, '$1 $2')
             .replace(/[ \t]+/g, ' ')
             .split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; }).join('\n')
@@ -197,11 +199,96 @@
             .trim();
     }
 
+    function cleanSlackThread(s) {
+        // Step 1: Convert quoted thread messages to blockquotes
+        s = s.replace(
+            /\n\n([\s\S]*?)From a thread in [^\n]*?View reply\d+ replies/g,
+            function(_, q) {
+                q = q.trim();
+                if (!q) return '\n\n';
+                return '\n\n> ' + q.replace(/\n/g, '\n> ') + '\n\n';
+            }
+        );
+        // Step 2: Remove app attributions (Added by GitHub, Jira Cloud, etc.)
+        s = s.replace(/\s*\| Added by [\w ]+/g, '');
+
+        // Step 3: Collect known names from "Name  [timestamp]" headers
+        var nameRe = /(\w[\w ]*?)  +\[\d{1,2}:\d{2}\s*[AP]M\]/g;
+        var nameSet = {};
+        var m;
+        while ((m = nameRe.exec(s)) !== null) nameSet[m[1]] = true;
+        var names = Object.keys(nameSet);
+
+        // Step 4: Filter out glued unfurl+name composites
+        names = names.filter(function(n) {
+            for (var j = 0; j < names.length; j++) {
+                if (names[j] !== n && n.length > names[j].length && n.endsWith(names[j])) return false;
+            }
+            return true;
+        });
+        names.sort(function(a, b) { return b.length - a.length; });
+        if (names.length === 0) return s.trim();
+
+        // Step 5: Build splitting regex and find all headers
+        var escaped = names.map(function(n) {
+            return n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        });
+        var headerRe = new RegExp(
+            '(^|\\n)[^\\n]*?(' + escaped.join('|') + ')  +\\[\\d{1,2}:\\d{2}\\s*[AP]M\\]', 'g'
+        );
+        var headers = [];
+        while ((m = headerRe.exec(s)) !== null) {
+            headers.push({ splitAt: m.index + m[1].length, headerEnd: headerRe.lastIndex, name: m[2] });
+        }
+        if (headers.length === 0) return s.trim();
+
+        // Step 6: Extract message bodies
+        var messages = [];
+        for (var i = 0; i < headers.length; i++) {
+            var bodyEnd = (i + 1 < headers.length) ? headers[i + 1].splitAt : s.length;
+            messages.push({ name: headers[i].name, body: s.substring(headers[i].headerEnd, bodyEnd) });
+        }
+
+        // Step 7: Clean each body
+        for (var i = 0; i < messages.length; i++) {
+            var body = messages[i].body;
+            // Remove bare timestamps (same-person continuation after app expansion)
+            body = body.replace(/(?:^|\n)\s*\[\d{1,2}:\d{2}\s*[AP]M\]/g, '\n\n');
+            // Remove reaction lines (emoji shortcodes with optional count on own line)
+            body = body.replace(/^\s*(?::[a-z][a-z0-9_+-]*:\s*)+\d*\s*$/gm, '');
+            // Remove inline emoji shortcodes
+            body = body.replace(/:[a-z][a-z0-9_+-]*:/g, '');
+            // trimEnd each line (preserve leading whitespace for code blocks)
+            body = body.split('\n').map(function(l) { return l.replace(/\s+$/, ''); }).join('\n');
+            body = body.replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '').replace(/\n+$/, '');
+            messages[i].body = body;
+        }
+
+        // Step 8: Merge consecutive same-person messages
+        var merged = [];
+        for (var i = 0; i < messages.length; i++) {
+            if (messages[i].body === '') continue;
+            if (merged.length > 0 && merged[merged.length - 1].name === messages[i].name) {
+                merged[merged.length - 1].body += '\n\n' + messages[i].body;
+            } else {
+                merged.push({ name: messages[i].name, body: messages[i].body });
+            }
+        }
+
+        // Step 9: Format output
+        var parts = [];
+        for (var i = 0; i < merged.length; i++) {
+            parts.push(merged[i].name + ':\n' + merged[i].body);
+        }
+        return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
     function detectAndClean(s) {
         if (!s.trim()) return '';
         if (/^\s*\d+\s*[+-]\s/m.test(s)) return cleanGitDiff(s);
-        if (/[│┃╏╎▌|]/.test(s)) return cleanClaudeDump(s);
-        var codeScore = (s.match(/[{}();=]/g) || []).length;
+        if (/[│┃╏╎▌⏺]/.test(s)) return cleanClaudeDump(s);
+        if ((s.match(/\w[\w ]*?  +\[\d{1,2}:\d{2}\s*[AP]M\]/g) || []).length >= 3) return cleanSlackThread(s);
+        var codeScore = (s.match(/[{};=]/g) || []).length;
         var lines = s.split('\n').length;
         if (lines > 0 && codeScore / lines > 0.5) return s.trim();
         return cleanLLMText(s);
